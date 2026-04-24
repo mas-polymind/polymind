@@ -1,0 +1,8 @@
+use_default_settings: true
+server:
+  secret_key: "ai_agency_secret_key" # Любая строка
+  limiter: false # Отключаем защиту от ботов, так как мы сами бот
+search:
+  formats:
+    - html
+    - json

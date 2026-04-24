@@ -1,0 +1,213 @@
+services:
+  # База данных PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: ai_agency_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-agency_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-user} -d ${DB_NAME:-agency_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Веб-интерфейс для управления БД
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: ai_agency_pgadmin
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    depends_on:
+      - db
+
+  # RabbitMQ (брокер сообщений) - единая точка обмена
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: ai_agency_rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # порт для подключения приложений
+      - "15672:15672" # веб-интерфейс управления
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Приватная поисковая система
+  searxng:
+    image: searxng/searxng:latest
+    container_name: ai_agency_search
+    restart: no # always
+    ports:
+      - "8081:8080"
+    volumes:
+      - ./data/searxng:/etc/searxng
+    environment:
+      - SEARXNG_SETTINGS_PATH=/etc/searxng/settings.yml
+      - INSTANCE_NAME=ai-agency-search
+      - SEARXNG_LIMITER=false
+
+  # Сервис ИИ-моделей Ollama
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ai_agency_ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+  # Python-агенты (все общаются через RabbitMQ)
+  agent-scout:
+    build: ./agents
+    container_name: ai_agency_agent_scout
+    restart: no # always
+    stop_grace_period: 10m
+    environment:
+      - AGENT_ROLE=scout
+      - OLLAMA_HOST=ollama:11434
+      - SEARXNG_URL=http://searxng:8080
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      - MODEL_NAME=qwen2.5:1.5b
+      - TEMPERATURE=0.7
+      - PYTHONUNBUFFERED=1
+      # LLM провайдер (ollama или openrouter)
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_URL=${OPENROUTER_URL:-https://openrouter.ai/api/v1}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.2-3b-instruct:free}
+      - FALLBACK_TO_OLLAMA=${FALLBACK_TO_OLLAMA:-true}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      searxng:
+        condition: service_started
+
+  agent-analyst:
+    build: ./agents
+    container_name: ai_agency_agent_analyst
+    restart: no # always
+    stop_grace_period: 10m
+    environment:
+      - AGENT_ROLE=analyst
+      - OLLAMA_HOST=ollama:11434
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      - MODEL_NAME=qwen2.5:1.5b
+      - TEMPERATURE=0.3
+      - PYTHONUNBUFFERED=1
+      # LLM провайдер (ollama или openrouter)
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_URL=${OPENROUTER_URL:-https://openrouter.ai/api/v1}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.2-3b-instruct:free}
+      - FALLBACK_TO_OLLAMA=${FALLBACK_TO_OLLAMA:-true}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  agent-writer:
+    build: ./agents
+    container_name: ai_agency_agent_writer
+    restart: no # always
+    stop_grace_period: 10m
+    environment:
+      - AGENT_ROLE=writer
+      - OLLAMA_HOST=ollama:11434
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      - MODEL_NAME=qwen2.5:1.5b
+      - TEMPERATURE=0.5
+      - PYTHONUNBUFFERED=1
+      # LLM провайдер (ollama или openrouter)
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_URL=${OPENROUTER_URL:-https://openrouter.ai/api/v1}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.2-3b-instruct:free}
+      - FALLBACK_TO_OLLAMA=${FALLBACK_TO_OLLAMA:-true}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  agent-critic:
+    build: ./agents
+    container_name: ai_agency_agent_critic
+    restart: no # always
+    stop_grace_period: 10m
+    environment:
+      - AGENT_ROLE=critic
+      - OLLAMA_HOST=ollama:11434
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      - MODEL_NAME=qwen2.5:1.5b
+      - TEMPERATURE=0.2
+      - PYTHONUNBUFFERED=1
+      # LLM провайдер (ollama или openrouter)
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - OPENROUTER_URL=${OPENROUTER_URL:-https://openrouter.ai/api/v1}
+      - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.2-3b-instruct:free}
+      - FALLBACK_TO_OLLAMA=${FALLBACK_TO_OLLAMA:-true}
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  # Оркестратор на Go (только RabbitMQ, без HTTP-вызовов агентов)
+  orchestrator:
+    build: ./orchestrator
+    container_name: ai_agency_orchestrator
+    restart: no # always
+    ports:
+      - "8080:8080"  # только для колбэков от агентов (если нужны) или healthcheck
+    environment:
+      - GOTOOLCHAIN=auto  # разрешает автоматическое обновление Go
+      # База данных
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-user}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_NAME=${DB_NAME:-agency_db}
+      
+      # RabbitMQ (единственный канал коммуникации)
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672/
+      
+      # Telegram
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      
+      # Сервер (для healthcheck и колбэков, если нужны)
+      - SERVER_PORT=8080
+      
+      # URL агентов НЕ НУЖНЫ - всё через RabbitMQ
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./orchestrator/.env:/app/.env
+
+volumes:
+  postgres_data:
+  ollama_data:
+  rabbitmq_data:
