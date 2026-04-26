@@ -67,6 +67,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: ai_agency_ollama
+    profiles: ["ollama"]
     restart: "always"
     ports:
       - "11434:11434"
@@ -96,8 +97,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      ollama:
-        condition: service_started
       searxng:
         condition: service_started
 
@@ -122,8 +121,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      ollama:
-        condition: service_started
 
   agent-writer:
     build: ./agents
@@ -146,8 +143,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      ollama:
-        condition: service_started
 
   agent-critic:
     build: ./agents
@@ -170,8 +165,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      ollama:
-        condition: service_started
 
   # Оркестратор на Go (только RabbitMQ, без HTTP-вызовов агентов)
   orchestrator:
