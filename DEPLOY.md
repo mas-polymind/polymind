@@ -127,7 +127,7 @@ docker-compose up -d
 
 ```bash
 docker-compose ps
-docker-compose logs -f orchestrator
+sudo docker-compose logs -f orchestrator
 ```
 
 ### 5.3. Остановка и перезапуск
