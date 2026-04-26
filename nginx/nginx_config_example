@@ -1,0 +1,56 @@
+server {
+    listen 80;
+    server_name polymind.ddns.net;
+    return 301 https://$host$request_uri; # Принудительный редирект на HTTPS
+}
+
+server {
+    listen 443 ssl; # listen для HTTPS
+    server_name polymind.ddns.net;
+
+    # Пути к сертификатам (Certbot их уже создал)
+    ssl_certificate /etc/letsencrypt/live/polymind.ddns.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/polymind.ddns.net/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        # Исправление CORS для GitHub Pages
+        proxy_hide_header 'Access-Control-Allow-Origin';
+        add_header 'Access-Control-Allow-Origin' 'https://mas-polymind.github.io' always;
+        add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+        add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since' always;
+
+        if ($request_method = 'OPTIONS') {
+            add_header 'Access-Control-Allow-Origin' 'https://mas-polymind.github.io' always;
+            add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
+            add_header 'Access-Control-Allow-Headers' 'Authorization,Content-Type,Accept,Origin,User-Agent,DNT,Cache-Control,X-Mx-ReqToken,Keep-Alive,X-Requested-With,If-Modified-Since' always;
+            add_header 'Access-Control-Max-Age' 1728000;
+            add_header 'Content-Type' 'text/plain; charset=utf-8';
+            add_header 'Content-Length' 0;
+            return 204;
+        }
+
+        # Проксирование на Go-оркестратор
+        proxy_pass http://localhost:8080;
+        
+        # Настройки для WebSocket (wss://)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+            # Таймауты для WebSocket (24 часа)
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+        proxy_connect_timeout 86400s;
+    }
+
+    location /static/ {
+        alias /opt/ai-agents/static/;
+    }
+}

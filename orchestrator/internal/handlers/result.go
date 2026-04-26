@@ -79,6 +79,7 @@ func (h *ResultHandler) Handle(body []byte) error {
 			log.Printf("ResultHandler: failed to advance task %d from scout", msg.TaskID)
 			return err
 		}
+		h.sendNotification(task, "Нашел информацию, анализирую ...")
 		nextMsg, _ := json.Marshal(map[string]uint{"task_id": msg.TaskID})
 		return h.broker.Publish("task.analyst", nextMsg)
 
@@ -96,6 +97,7 @@ func (h *ResultHandler) Handle(body []byte) error {
 			log.Printf("ResultHandler: failed to advance task %d from analyst", msg.TaskID)
 			return err
 		}
+		h.sendNotification(task, "Пишу пост ...")
 		nextMsg, _ := json.Marshal(map[string]uint{"task_id": msg.TaskID})
 		return h.broker.Publish("task.writer", nextMsg)
 
@@ -117,6 +119,7 @@ func (h *ResultHandler) Handle(body []byte) error {
 			log.Printf("ResultHandler: failed to advance task %d from writer", msg.TaskID)
 			return err
 		}
+		h.sendNotification(task, "Проверяю написанный пост...")
 		nextMsg, _ := json.Marshal(map[string]uint{"task_id": msg.TaskID})
 		return h.broker.Publish("task.critic", nextMsg)
 
@@ -177,7 +180,7 @@ func (h *ResultHandler) Handle(body []byte) error {
 			}
 			log.Printf("ResultHandler: task %d completed with score %.1f after %d iterations",
 				msg.TaskID, score, newIter)
-			h.sendNotification(task, "✅ Готово!\n\n"+draft)
+			h.sendNotification(task, "\n"+draft)
 		} else {
 			// Return to writer for another iteration
 			// Validate that analysis exists before returning to writer
@@ -216,7 +219,7 @@ func (h *ResultHandler) Handle(body []byte) error {
 			}
 			log.Printf("ResultHandler: task %d returning to writer for iteration %d (score: %.1f)",
 				msg.TaskID, newIter, score)
-			h.sendNotification(task, fmt.Sprintf("✍️ Дорабатываю пост... (итерация %d/%d)", newIter, MaxIterations))
+			h.sendNotification(task, fmt.Sprintf("✍️ Дорабатываю пост ...", newIter, MaxIterations))
 			nextMsg, _ := json.Marshal(map[string]uint{"task_id": msg.TaskID})
 			return h.broker.Publish("task.writer", nextMsg)
 		}

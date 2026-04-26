@@ -153,7 +153,7 @@ sudo apt install -y nginx
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com; # Замените на ваш домен или IP
+    server_name polymind.ddns.net; # Замените на ваш домен или IP
 
     location / {
         proxy_pass http://localhost:8080;
@@ -192,7 +192,7 @@ sudo apt install -y certbot python3-certbot-nginx
 ### 7.2. Получение SSL-сертификата
 
 ```bash
-sudo certbot --nginx -d your-domain.com
+sudo certbot --nginx -d polymind.ddns.net
 ```
 
 Следуйте инструкциям. Certbot автоматически обновит конфигурацию nginx.

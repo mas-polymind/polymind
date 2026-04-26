@@ -25,6 +25,8 @@ func NewServer(b *broker.Broker) *Server {
 	return &Server{
 		broker: b,
 		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024 * 1024, // 1 MB
+			WriteBufferSize: 1024 * 1024, // 1 MB
 			CheckOrigin: func(r *http.Request) bool {
 				return true // Разрешаем все origin для разработки
 			},
@@ -112,6 +114,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+
+	// Увеличиваем лимит размера сообщения до 10 MB
+	conn.SetReadLimit(10 * 1024 * 1024)
 
 	s.clientsLock.Lock()
 	s.clients[conn] = true

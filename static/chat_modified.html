@@ -47,7 +47,8 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8080'; // Измените на адрес вашего сервера
+        const API_BASE = 'https://polymind.ddns.net'; // Адрес сервера
+        const WS_BASE = 'wss://polymind.ddns.net'; // WebSocket с SSL
         let ws = null;
         let currentTaskId = null;
 
@@ -62,7 +63,7 @@
 
         function connectWebSocket() {
             if (ws && ws.readyState === WebSocket.OPEN) return;
-            ws = new WebSocket(`ws://localhost:8080/ws`);
+            ws = new WebSocket(`${WS_BASE}/ws`);
             ws.onopen = () => {
                 console.log('WebSocket connected');
                 addMessage('✅ Подключение к серверу установлено', 'bot');
