@@ -39,6 +39,7 @@ go.work.sum
 
 # env file
 .env
+.env.docker
 
 # Editor/IDE
 # .idea/

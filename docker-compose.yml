@@ -3,7 +3,7 @@ services:
   db:
     image: postgres:15-alpine
     container_name: ai_agency_db
-    restart: always
+    restart: "always"
     environment:
       POSTGRES_USER: ${DB_USER:-user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
@@ -34,7 +34,7 @@ services:
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: ai_agency_rabbitmq
-    restart: always
+    restart: "always"
     ports:
       - "5672:5672"   # порт для подключения приложений
       - "15672:15672" # веб-интерфейс управления
@@ -53,7 +53,7 @@ services:
   searxng:
     image: searxng/searxng:latest
     container_name: ai_agency_search
-    restart: no # always
+    restart: "always"
     ports:
       - "8081:8080"
     volumes:
@@ -67,7 +67,7 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: ai_agency_ollama
-    restart: always
+    restart: "always"
     ports:
       - "11434:11434"
     volumes:
@@ -77,7 +77,7 @@ services:
   agent-scout:
     build: ./agents
     container_name: ai_agency_agent_scout
-    restart: no # always
+    restart: "always"
     stop_grace_period: 10m
     environment:
       - AGENT_ROLE=scout
@@ -104,7 +104,7 @@ services:
   agent-analyst:
     build: ./agents
     container_name: ai_agency_agent_analyst
-    restart: no # always
+    restart: "always"
     stop_grace_period: 10m
     environment:
       - AGENT_ROLE=analyst
@@ -128,7 +128,7 @@ services:
   agent-writer:
     build: ./agents
     container_name: ai_agency_agent_writer
-    restart: no # always
+    restart: "always"
     stop_grace_period: 10m
     environment:
       - AGENT_ROLE=writer
@@ -152,7 +152,7 @@ services:
   agent-critic:
     build: ./agents
     container_name: ai_agency_agent_critic
-    restart: no # always
+    restart: "always"
     stop_grace_period: 10m
     environment:
       - AGENT_ROLE=critic
@@ -177,7 +177,7 @@ services:
   orchestrator:
     build: ./orchestrator
     container_name: ai_agency_orchestrator
-    restart: no # always
+    restart: "always"
     ports:
       - "8080:8080"  # только для колбэков от агентов (если нужны) или healthcheck
     environment:
