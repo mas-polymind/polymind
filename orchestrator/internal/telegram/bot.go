@@ -125,7 +125,7 @@ func (b *Bot) Start() {
 				log.Printf("CreateTask error: %v", err)
 				continue
 			}
-			b.SendMessage(chatID, "🔍 Ищу информацию... (шаг 1/4)")
+			b.SendMessage(chatID, "🔍 Ищу информацию...")
 
 			// Публикуем в очередь task.scout
 			msgBytes, _ := json.Marshal(map[string]uint{"task_id": task.ID})

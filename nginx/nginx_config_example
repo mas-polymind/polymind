@@ -1,21 +1,26 @@
 server {
     listen 80;
     server_name polymind.ddns.net;
-    return 301 https://$host$request_uri; # Принудительный редирект на HTTPS
+    return 301 https://$host$request_uri;
 }
 
 server {
-    listen 443 ssl; # listen для HTTPS
+    listen 443 ssl;
     server_name polymind.ddns.net;
 
-    # Пути к сертификатам (Certbot их уже создал)
     ssl_certificate /etc/letsencrypt/live/polymind.ddns.net/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/polymind.ddns.net/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
+    # Общие настройки прокси
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
     location / {
-        # Исправление CORS для GitHub Pages
+        # Сначала обрабатываем CORS
         proxy_hide_header 'Access-Control-Allow-Origin';
         add_header 'Access-Control-Allow-Origin' 'https://mas-polymind.github.io' always;
         add_header 'Access-Control-Allow-Methods' 'GET, POST, OPTIONS' always;
@@ -31,23 +36,28 @@ server {
             return 204;
         }
 
-        # Проксирование на Go-оркестратор
-        proxy_pass http://localhost:8080;
+        # Теперь проксируем (ТОЛЬКО ОДИН РАЗ)
+        proxy_pass http://172.18.0.8:8080;
         
-        # Настройки для WebSocket (wss://)
+        # Настройки для WebSocket (wss)
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "upgrade";
         
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-            # Таймауты для WebSocket (24 часа)
         proxy_read_timeout 86400s;
         proxy_send_timeout 86400s;
-        proxy_connect_timeout 86400s;
+    }
+
+    location /ws {
+        # Проксируем WebSocket на конкретный эндпоинт контейнера
+        proxy_pass http://172.18.0.8:8080; 
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+            # Отключаем буферизацию, она мешает сокетам
+        proxy_buffering off;
+        proxy_cache_bypass $http_upgrade;
     }
 
     location /static/ {

@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"orchestrator/internal/broker"
 	"orchestrator/internal/database"
@@ -219,7 +218,7 @@ func (h *ResultHandler) Handle(body []byte) error {
 			}
 			log.Printf("ResultHandler: task %d returning to writer for iteration %d (score: %.1f)",
 				msg.TaskID, newIter, score)
-			h.sendNotification(task, fmt.Sprintf("✍️ Дорабатываю пост ...", newIter, MaxIterations))
+			h.sendNotification(task, "✍️ Дорабатываю пост ...")
 			nextMsg, _ := json.Marshal(map[string]uint{"task_id": msg.TaskID})
 			return h.broker.Publish("task.writer", nextMsg)
 		}

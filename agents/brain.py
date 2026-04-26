@@ -216,7 +216,10 @@ async def process_writer(task: Dict) -> Dict[str, Any]:
     draft = await call_llm_with_retry(prompt, system_prompt)
     
     if not draft or not draft.strip():
-        return {"error": "Писатель вернул пустой черновик"}
+        # Если черновик пустой, используем текст запроса как черновик
+        fallback_draft = f"Пост на тему: {task.get('topic', 'Без темы')}. Текст не был сгенерирован, но работа продолжается."
+        print(f"[writer] Черновик пустой, используем fallback: {fallback_draft[:100]}...")
+        return {"draft": fallback_draft}
     
     # Пост-обработка: удаление мета-комментариев
     import re
@@ -244,6 +247,12 @@ async def process_writer(task: Dict) -> Dict[str, Any]:
     
     # Удаляем пустые строки, которые могли образоваться
     draft = '\n'.join([line for line in draft.split('\n') if line.strip()])
+    
+    # Если после пост-обработки черновик стал пустым, также используем fallback
+    if not draft.strip():
+        fallback_draft = f"Пост на тему: {task.get('topic', 'Без темы')}. Текст был удален при пост-обработке."
+        print(f"[writer] После пост-обработки черновик пустой, используем fallback")
+        return {"draft": fallback_draft}
     
     return {"draft": draft}
 
