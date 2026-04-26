@@ -17,6 +17,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    stop_signal: SIGKILL
 
   # Веб-интерфейс для управления БД
   pgadmin:
@@ -27,6 +28,7 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    stop_signal: SIGKILL
     depends_on:
       - db
 
@@ -43,6 +45,7 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    stop_signal: SIGKILL
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
@@ -56,6 +59,7 @@ services:
     restart: "always"
     ports:
       - "8081:8080"
+    stop_signal: SIGKILL
     volumes:
       - ./data/searxng:/etc/searxng
     environment:
@@ -71,6 +75,7 @@ services:
     restart: "always"
     ports:
       - "11434:11434"
+    stop_signal: SIGKILL
     volumes:
       - ollama_data:/root/.ollama
 
@@ -80,6 +85,7 @@ services:
     container_name: ai_agency_agent_scout
     restart: "always"
     stop_grace_period: 10m
+    stop_signal: SIGKILL
     environment:
       - AGENT_ROLE=scout
       - OLLAMA_HOST=ollama:11434
@@ -118,6 +124,7 @@ services:
       - OPENROUTER_URL=${OPENROUTER_URL:-https://openrouter.ai/api/v1}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.2-3b-instruct:free}
       - FALLBACK_TO_OLLAMA=${FALLBACK_TO_OLLAMA:-true}
+    stop_signal: SIGKILL
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -140,6 +147,7 @@ services:
       - OPENROUTER_URL=${OPENROUTER_URL:-https://openrouter.ai/api/v1}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.2-3b-instruct:free}
       - FALLBACK_TO_OLLAMA=${FALLBACK_TO_OLLAMA:-true}
+    stop_signal: SIGKILL
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -162,6 +170,7 @@ services:
       - OPENROUTER_URL=${OPENROUTER_URL:-https://openrouter.ai/api/v1}
       - OPENROUTER_MODEL=${OPENROUTER_MODEL:-meta-llama/llama-3.2-3b-instruct:free}
       - FALLBACK_TO_OLLAMA=${FALLBACK_TO_OLLAMA:-true}
+    stop_signal: SIGKILL
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -173,6 +182,7 @@ services:
     restart: "always"
     ports:
       - "8080:8080"  # только для колбэков от агентов (если нужны) или healthcheck
+    stop_signal: SIGKILL
     environment:
       - GOTOOLCHAIN=auto  # разрешает автоматическое обновление Go
       # База данных
