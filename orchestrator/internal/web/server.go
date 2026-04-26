@@ -118,11 +118,50 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Увеличиваем лимит размера сообщения до 10 MB
 	conn.SetReadLimit(10 * 1024 * 1024)
 
+	// Настраиваем обработчики ping/pong для поддержания соединения
+	conn.SetPingHandler(func(appData string) error {
+		// Автоматически отправляем pong в ответ на ping
+		err := conn.WriteControl(websocket.PongMessage, []byte(appData), time.Now().Add(10*time.Second))
+		if err != nil {
+			log.Printf("Failed to send pong: %v", err)
+		}
+		return nil
+	})
+
+	conn.SetPongHandler(func(appData string) error {
+		// Сбрасываем deadline при получении pong
+		conn.SetReadDeadline(time.Now().Add(70 * time.Minute))
+		return nil
+	})
+
+	// Устанавливаем начальный deadline на 70 минут (вместо 60 секунд по умолчанию)
+	conn.SetReadDeadline(time.Now().Add(70 * time.Minute))
+
 	s.clientsLock.Lock()
 	s.clients[conn] = true
 	s.clientsLock.Unlock()
 
 	log.Printf("New WebSocket client connected")
+
+	// Запускаем горутину для периодической отправки ping (каждые 30 секунд)
+	stopPing := make(chan bool)
+	defer close(stopPing)
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				err := conn.WriteControl(websocket.PingMessage, []byte("keepalive"), time.Now().Add(10*time.Second))
+				if err != nil {
+					// Если не удалось отправить ping, соединение вероятно разорвано
+					return
+				}
+			case <-stopPing:
+				return
+			}
+		}
+	}()
 
 	// Читаем сообщения от клиента (можно использовать для двусторонней связи)
 	for {
@@ -131,6 +170,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Printf("WebSocket read error: %v", err)
 			break
 		}
+		// Сбрасываем deadline при получении любого сообщения
+		conn.SetReadDeadline(time.Now().Add(70 * time.Minute))
+		
 		if messageType == websocket.TextMessage {
 			log.Printf("Received WebSocket message: %s", p)
 			// Можно обработать, например, ping/pong

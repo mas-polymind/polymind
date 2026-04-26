@@ -232,7 +232,7 @@ const API_BASE = 'https://your-domain.com'; // вместо localhost:8080
 Отправьте боту сообщение в Telegram. Он должен ответить "Ищу информацию...". Если нет, проверьте логи:
 
 ```bash
-docker-compose logs -f orchestrator
+sudo docker-compose logs -f orchestrator
 ```
 
 ### 9.3. Настройка вебхука (опционально)
