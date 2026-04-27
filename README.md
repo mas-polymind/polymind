@@ -6,4 +6,5 @@ Multi-agent system
 
 Чат через веб-интерфейс: https://mas-polymind.github.io/site/chat.html
 
+Примеры запросов/ответов https://github.com/mas-polymind/site/blob/main/examples.md
 
